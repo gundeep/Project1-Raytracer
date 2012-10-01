@@ -26,6 +26,7 @@ struct geom {
 	glm::vec3* rotations;
 	glm::vec3* scales;
 	cudaMat4* transforms;
+	cudaMat4* tranposeTranforms;
 	cudaMat4* inverseTransforms;
 };
 
@@ -37,6 +38,7 @@ struct staticGeom {
 	glm::vec3 scale;
 	cudaMat4 transform;
 	cudaMat4 inverseTransform;
+	cudaMat4 tranposeTranform;
 };
 
 struct cameraData {
@@ -71,6 +73,21 @@ struct material{
 	glm::vec3 absorptionCoefficient;
 	float reducedScatterCoefficient;
 	float emittance;
+	
 };
+
+//struct new_material{
+//	glm::vec3* color;
+//	float* specularExponent;
+//	glm::vec3* specularColor;
+//	float* hasReflective;
+//	float* hasRefractive;
+//	float* indexOfRefraction;
+//	float* hasScatter;
+//	glm::vec3* absorptionCoefficient;
+//	float* reducedScatterCoefficient;
+//	float* emittance;
+//	
+//};
 
 #endif //CUDASTRUCTS_H

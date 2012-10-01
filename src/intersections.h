@@ -12,6 +12,8 @@
 #include "utilities.h"
 #include <thrust/random.h>
 
+using namespace glm;
+
 //Some forward declarations
 __host__ __device__ glm::vec3 getPointOnRay(ray r, float t);
 __host__ __device__ glm::vec3 multiplyMV(cudaMat4 m, glm::vec4 v);
@@ -72,7 +74,244 @@ __host__ __device__ glm::vec3 getSignOfRay(ray r){
 //Cube intersection test, return -1 if no intersection, otherwise, distance to intersection
 __host__ __device__  float boxIntersectionTest(staticGeom box, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
 
-    return -1;
+	vec4 VO= vec4 (r.direction.x,r.direction.y,r.direction.z,0);
+	vec4 PO= vec4 (r.origin.x,r.origin.y,r.origin.z,1);
+
+	VO= glm::vec4(multiplyMV(box.inverseTransform,VO),0);
+	PO= glm::vec4(multiplyMV(box.inverseTransform,PO),1);
+
+	float T1,T2,temp;
+	float tnear= -500000.000;
+	float tfar= 500000.000;
+
+
+	vec4 BI= vec4(-0.5,-0.5,-0.5,1);
+	vec4 BH= vec4(0.5,0.5,0.5,1);
+	
+	// for each pair of planes
+
+	if(VO.x ==0)  // the ray is parallel to x planes
+	{
+		if (PO.x <BI.x || PO.x>BH.x)//and if ray is not between the slabs then it will not intersect the planes. Logic hai :)
+		{
+			return -1;
+
+		}
+	}
+	else      // when ray is not parallel to x axis
+		// compute intersection distance between the planes.
+	{
+		T1= (BI.x- PO.x)/VO.x;
+		T2= (BH.x - PO.x)/VO.x;
+
+		if (T1>T2)  // swap T1 T2
+		{
+			temp=T1;
+			T1=T2;
+			T2=temp;
+		}
+
+		if (T1>tnear)
+		{
+			tnear=T1;   // we want the largest tnear
+		
+		}
+		if( T2<tfar)
+		{
+			tfar=T2;   // we want smallest tfar
+		}
+
+		if(tnear>tfar)   // cube missed
+		{
+			return -1;
+		}
+
+		if(tfar<0)
+		{
+			return -1;  // box bheind the light
+		}
+	}
+	
+
+
+	// doing y planes now
+
+	if(VO.y == 0)  // the ray is parallel to y planes
+	{
+		if (PO.y <BI.y || PO.y>BH.y)//and if ray is not between the slabs then it will not intersect the planes. Logic hai :)
+		{
+			return -1;
+
+		}
+	}
+	else      // when ray is not parallel to y axis
+		// compute intersection distance between the planes.
+	{
+		T1= (BI.y- PO.y)/VO.y;
+		T2= (BH.y - PO.y)/VO.y;
+
+		if (T1>T2)  // swap T1 T2
+		{
+			temp=T1;
+			T1=T2;
+			T2=temp;
+		}
+
+		if (T1>tnear)
+		{
+			tnear=T1;   // we want the largest tnear
+		
+		}
+		if( T2<tfar )
+		{
+			tfar=T2;   // we want smallest tfar
+		}
+
+		if(tnear>tfar)   // cube missed
+		{
+			return -1;
+		}
+
+		if(tfar<0)
+		{
+			return -1;  // box bheind the light
+		}
+	}
+
+
+	// FOR Z PLANES NOW -----
+
+	if(VO.z == 0)  // the ray is parallel to x planes
+	{
+		if (PO.z <BI.z || PO.z>BH.z)//and if ray is not between the slabs then it will not intersect the planes. Logic hai :)
+		{
+			return -1;
+
+		}
+	}
+	else      // when ray is not parallel to x axis
+		// compute intersection distance between the planes.
+	{
+		T1= (BI.z- PO.z)/VO.z;
+		T2= (BH.z - PO.z)/VO.z;
+
+		if (T1>T2)  // swap T1 T2
+		{
+			temp=T1;
+			T1=T2;
+			T2=temp;
+		}
+
+		if (T1>tnear)
+		{
+			tnear=T1;   // we want the largest tnear
+		
+		}
+		if(T2<tfar)
+		{
+			tfar=T2;   // we want smallest tfar
+		}
+
+		if(tnear>tfar)   // cube missed
+		{
+			return -1;
+		}
+
+		if(tfar<0)
+		{
+			return -1;  // box bheind the light
+		}
+		if(tnear>0)
+		{
+			if(abs(tnear)<0.0001)
+			{
+				return -1;
+			}
+			else
+			{
+				glm::vec4 POI= PO+VO*tnear;
+				if(POI.x<=0.5+EPSILON && POI.x>=0.5-EPSILON)
+				{
+					normal=glm::vec3(1,0,0);
+				}
+				if(POI.x<=-0.5+EPSILON && POI.x>=-0.5-EPSILON)
+				{
+					normal=glm::vec3(-1,0,0);
+				}
+				if(POI.y<=0.5+EPSILON && POI.y>=0.5-EPSILON)
+				{
+					normal=glm::vec3(0,1,0);
+				}
+				if(POI.y<=-0.5+EPSILON && POI.y>=-0.5-EPSILON)
+				{
+					normal=glm::vec3(0,-1,0);
+				}
+				if(POI.z<=0.5+EPSILON && POI.z>=0.5-EPSILON)
+				{
+					normal=glm::vec3(0,0,1);
+				}
+				if(POI.z<=-0.5+EPSILON && POI.z>=-0.5-EPSILON)
+				{
+					normal=glm::vec3(0,0,-1);
+				}
+
+				vec4 Normal= vec4(normal, 0);
+				//cudaMat4 transposed = box.tranposeTranform);
+				normal= multiplyMV(box.tranposeTranform,Normal);
+			glm::vec3 test= normal;;
+
+			}
+			intersectionPoint = r.origin + r.direction*tnear;
+			return tnear;
+		}
+	}
+
+	if (abs(tnear) < 0.001)
+		return -1;
+	if (tnear > 0)
+	{
+		intersectionPoint = r.origin + r.direction*tnear;
+		return tnear;
+	}
+	if(abs(tfar) < 0.001)
+		return -1;
+	if (tfar > 0)
+	{
+		glm::vec4 POI= PO+VO*tfar;
+		if(POI.x<=0.5+EPSILON && POI.x>=0.5-EPSILON)
+		{
+			normal=glm::vec3(1,0,0);
+		}
+		if(POI.x<=-0.5+EPSILON && POI.x>=-0.5-EPSILON)
+		{
+			normal=glm::vec3(-1,0,0);
+		}
+		if(POI.y<=0.5+EPSILON && POI.y>=0.5-EPSILON)
+		{
+			normal=glm::vec3(0,1,0);
+		}
+		if(POI.y<=-0.5+EPSILON && POI.y>=-0.5-EPSILON)
+		{
+			normal=glm::vec3(0,-1,0);
+		}
+		if(POI.z<=0.5+EPSILON && POI.z>=0.5-EPSILON)
+		{
+			normal=glm::vec3(0,0,1);
+		}
+		if(POI.z<=-0.5+EPSILON && POI.z>=-0.5-EPSILON)
+		{
+			normal=glm::vec3(0,0,-1); 
+		}
+
+		vec4 Normal= vec4(normal, 0);
+		//glm::mat4 transposed2= glm::mat4(box.tranposeTranform);
+		normal= multiplyMV(box.tranposeTranform,Normal);
+		glm::vec3 test=normal;
+		intersectionPoint = r.origin + r.direction*tfar;
+		return tfar;
+	}
+	return -1;
+
 }
 
 //LOOK: Here's an intersection test example from a sphere. Now you just need to figure out cube and, optionally, triangle.
